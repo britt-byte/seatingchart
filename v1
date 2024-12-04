@@ -1,0 +1,59 @@
+import pandas as pd
+from itertools import combinations
+import random
+
+def generate_seating(people, table_sizes, workplaces):
+    coworkers = {name for name, workplace in workplaces.items() if workplace != "None"}
+    while True:
+        random.shuffle(people)
+        seating = []
+        idx = 0
+        valid = True
+        for size in table_sizes:
+            table = people[idx:idx + size]
+            if len(coworkers.intersection(table)) > 1:
+                valid = False
+                break
+            seating.append(table)
+            idx += size
+        if valid:
+            return seating
+
+def generate_arrangements(people, table_sizes, days, workplaces):
+    previous_pairings = set()
+    daily_arrangements = []
+    for _ in range(days):
+        while True:
+            seating = generate_seating(people, table_sizes, workplaces)
+            current_pairings = set()
+            for table in seating:
+                current_pairings.update(combinations(table, 2))
+            if current_pairings.isdisjoint(previous_pairings):
+                previous_pairings.update(current_pairings)
+                daily_arrangements.append(seating)
+                break
+    return daily_arrangements
+
+# Example usage
+def main():
+    # Load data
+    students_df = pd.read_csv("students.csv")  # CSV with columns "Name" and "Workplace"
+    students = list(students_df["Name"])
+    workplaces = dict(zip(students_df["Name"], students_df["Workplace"]))
+    table_sizes = [4] * 8 + [3] * 2  # Example configuration
+    num_days = 5
+
+    # Generate arrangements
+    seating_arrangements = generate_arrangements(students, table_sizes, num_days, workplaces)
+
+    # Save results
+    seating_data = {
+        f"Day {i+1}": {f"Table {j+1}": table for j, table in enumerate(day)}
+        for i, day in enumerate(seating_arrangements)
+    }
+    seating_df = pd.DataFrame(seating_data)
+    seating_df.to_csv("seating_chart.csv", index=False)
+    print("Seating chart saved to seating_chart.csv!")
+
+if __name__ == "__main__":
+    main()
